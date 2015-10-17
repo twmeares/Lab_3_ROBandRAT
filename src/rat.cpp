@@ -40,7 +40,11 @@ void RAT_print_state(RAT *t){
 /////////////////////////////////////////////////////////////
 
 int  RAT_get_remap(RAT *t, int arf_id){
-
+//index to the arf_id given to the funciton and return the prf_id
+if(t->RAT_Entries[arf_id].valid)
+  return t->RAT_Entries[arf_id].prf_id;
+else
+  return -1;
 }
 
 /////////////////////////////////////////////////////////////
@@ -48,7 +52,10 @@ int  RAT_get_remap(RAT *t, int arf_id){
 /////////////////////////////////////////////////////////////
 
 void RAT_set_remap(RAT *t, int arf_id, int prf_id){
-
+//follwing assumption one in get_remap it would make sense that here we would index to arf_id and set the prf_id to the given value here.
+t->RAT_Entries[arf_id].prf_id = prf_id;
+t->RAT_Entries[arf_id].valid = true;
+return;
 }
 
 /////////////////////////////////////////////////////////////
@@ -56,7 +63,8 @@ void RAT_set_remap(RAT *t, int arf_id, int prf_id){
 /////////////////////////////////////////////////////////////
 
 void RAT_reset_entry(RAT *t, int arf_id){
-
+// index to the arf_id and set the valid bit to 0
+t->RAT_Entries[arf_id].valid = false;
 }
 
 
