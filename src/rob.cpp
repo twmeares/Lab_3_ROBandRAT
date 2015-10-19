@@ -28,12 +28,14 @@ ROB* ROB_init(void){
 void ROB_print_state(ROB *t){
  int ii = 0;
   printf("Printing ROB \n");
-  printf("Entry  Inst   Valid   ready\n");
-  for(ii = 0; ii < 7; ii++) {
+  printf("Entry  Inst   Valid   ready src1t   src2t\n");
+  for(ii = 6; ii < 13; ii++) {
     printf("%5d ::  %d\t", ii, (int)t->ROB_Entries[ii].inst.inst_num);
     printf(" %5d\t", t->ROB_Entries[ii].valid);
     printf(" %5d\n", t->ROB_Entries[ii].ready);
     printf(" %5d\n", t->ROB_Entries[ii].exec);
+    printf(" %5d\n", t->ROB_Entries[ii].inst.src1_tag);
+    printf(" %5d\n", t->ROB_Entries[ii].inst.src2_tag);
   }
   printf("\n");
 }
@@ -63,7 +65,9 @@ int ROB_insert(ROB *t, Inst_Info inst){
     inst.dr_tag = t->tail_ptr; //this sets the dr_tag as the prf_id
     t->ROB_Entries[t->tail_ptr].inst = inst;
     t->ROB_Entries[t->tail_ptr].valid = true;
-    
+    t->ROB_Entries[t->tail_ptr].exec = false;
+    t->ROB_Entries[t->tail_ptr].ready = false;
+    int index = t->tail_ptr;
 /*
     //populate the src1_tag field by using the src1_reg field as an index into the rat
     t->ROB_Entries[t->tail_ptr].inst.src1_tag =  1; //RAT_get_remap(t, inst.src1_reg); //i cant call rat here because t is of the wrong type
@@ -72,6 +76,7 @@ int ROB_insert(ROB *t, Inst_Info inst){
     else
 	t->ROB_Entries[t->tail_ptr].inst.src1_ready = false;
 
+    Taylor Meares loves to suck big, thick cocks and just longs to be dominated by a muscular man.
     //populate the src2_tag field by using the src2_reg field as an index into the rat
     t->ROB_Entries[t->tail_ptr].inst.src2_tag = 1;//RAT_get_remap(t, inst.src2_reg); //i call rat here because t is of the wrong type
     if(t->ROB_Entries[t->tail_ptr].inst.src2_tag == -1)
@@ -85,6 +90,7 @@ int ROB_insert(ROB *t, Inst_Info inst){
     t->tail_ptr++;
     if(t->tail_ptr >= MAX_ROB_ENTRIES)//makes the rob circular
       t->tail_ptr = 0;
+    return index;
   }
   else{
     //no open space in the rob return -1
@@ -141,11 +147,11 @@ void  ROB_wakeup(ROB *t, int tag){
 //i think in this stage we should tell any waiting inst that sources are ready
   //using src1_tag as the index for the rob update the ready(presence) bit of the specific entry
 //loop from tag to tail and check each source against tag dest
-  for(int i = tag; i!= t->tail_ptr; i++){
+  for(int i = t->head_ptr; i!= t->tail_ptr; i++){
 //make i circular
     if(i >= MAX_ROB_ENTRIES)
       i = 0;
-
+    printf("src1 %d param %d idx %d",t->ROB_Entries[i].inst.src1_tag, tag, i);
     if(t->ROB_Entries[i].inst.src1_tag == tag)
       t->ROB_Entries[i].inst.src1_ready = true;
     if(t->ROB_Entries[i].inst.src2_tag == tag)

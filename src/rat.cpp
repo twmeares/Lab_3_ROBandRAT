@@ -41,7 +41,7 @@ void RAT_print_state(RAT *t){
 
 int  RAT_get_remap(RAT *t, int arf_id){
 //index to the arf_id given to the funciton and return the prf_id
-if(t->RAT_Entries[arf_id].valid)
+if(t->RAT_Entries[arf_id].valid == true && arf_id != -1)
   return t->RAT_Entries[arf_id].prf_id;
 else
   return -1;
