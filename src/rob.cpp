@@ -29,7 +29,7 @@ void ROB_print_state(ROB *t){
  int ii = 0;
   printf("Printing ROB \n");
   printf("Entry  Inst   Valid   ready src1t   src2t\n");
-  for(ii = 6; ii < 13; ii++) {
+  for(ii = 72; ii < 87; ii++) {
     printf("%5d ::  %d\t", ii, (int)t->ROB_Entries[ii].inst.inst_num);
     printf(" %5d\t", t->ROB_Entries[ii].valid);
     printf(" %5d\n", t->ROB_Entries[ii].ready);
@@ -46,7 +46,7 @@ void ROB_print_state(ROB *t){
 
 bool ROB_check_space(ROB *t){
 //just check to see if tail is pointing to an invalid space...
-  return !(t->ROB_Entries[t->tail_ptr].valid); //if it points to invalid then there is space and true will be returned
+  return (!(t->ROB_Entries[t->tail_ptr].valid) ); //if it points to invalid then there is space and true will be returned
 }
 
 /////////////////////////////////////////////////////////////
@@ -68,22 +68,7 @@ int ROB_insert(ROB *t, Inst_Info inst){
     t->ROB_Entries[t->tail_ptr].exec = false;
     t->ROB_Entries[t->tail_ptr].ready = false;
     int index = t->tail_ptr;
-/*
-    //populate the src1_tag field by using the src1_reg field as an index into the rat
-    t->ROB_Entries[t->tail_ptr].inst.src1_tag =  1; //RAT_get_remap(t, inst.src1_reg); //i cant call rat here because t is of the wrong type
-    if(t->ROB_Entries[t->tail_ptr].inst.src1_tag == -1) //set to ready if the remap is invalid
-	t->ROB_Entries[t->tail_ptr].inst.src1_ready = true;
-    else
-	t->ROB_Entries[t->tail_ptr].inst.src1_ready = false;
 
-    Taylor Meares loves to suck big, thick cocks and just longs to be dominated by a muscular man.
-    //populate the src2_tag field by using the src2_reg field as an index into the rat
-    t->ROB_Entries[t->tail_ptr].inst.src2_tag = 1;//RAT_get_remap(t, inst.src2_reg); //i call rat here because t is of the wrong type
-    if(t->ROB_Entries[t->tail_ptr].inst.src2_tag == -1)
-	t->ROB_Entries[t->tail_ptr].inst.src2_ready = true;
-    else
-	t->ROB_Entries[t->tail_ptr].inst.src2_ready = false;
-*/
  
 //add more things like wtf is dr_tag i think it is the index of the rob? kana~
     //update the tail pointer
@@ -147,17 +132,32 @@ void  ROB_wakeup(ROB *t, int tag){
 //i think in this stage we should tell any waiting inst that sources are ready
   //using src1_tag as the index for the rob update the ready(presence) bit of the specific entry
 //loop from tag to tail and check each source against tag dest
-  for(int i = t->head_ptr; i!= t->tail_ptr; i++){
-//make i circular
-    if(i >= MAX_ROB_ENTRIES)
-      i = 0;
-    printf("src1 %d param %d idx %d",t->ROB_Entries[i].inst.src1_tag, tag, i);
+int i = t->head_ptr;
+  if(t->head_ptr == t->tail_ptr){
+    i++;
+    if(i == MAX_ROB_ENTRIES){
+      i=0;
+    }
+  }
+  for(; i!= t->tail_ptr; i++){
+    //printf("wakeup loop tail %d idx %d\n",t->tail_ptr, i);
+    //printf("src1 %d param %d idx %d",t->ROB_Entries[i].inst.src1_tag, tag, i);
     if(t->ROB_Entries[i].inst.src1_tag == tag)
       t->ROB_Entries[i].inst.src1_ready = true;
     if(t->ROB_Entries[i].inst.src2_tag == tag)
       t->ROB_Entries[i].inst.src2_ready = true;
+
+    //make i circular
+    if(i >= MAX_ROB_ENTRIES-1)
+      i = -1;
+
   }
   //no need to check tail index
+    if(t->ROB_Entries[t->tail_ptr].inst.src1_tag == tag)
+      t->ROB_Entries[t->tail_ptr].inst.src1_ready = true;
+    if(t->ROB_Entries[t->tail_ptr].inst.src2_tag == tag)
+      t->ROB_Entries[t->tail_ptr].inst.src2_ready = true;
+
 
 }
 
@@ -169,10 +169,10 @@ void  ROB_wakeup(ROB *t, int tag){
 Inst_Info ROB_remove_head(ROB *t){
   //t->ROB_Entries[t->ROB_Entries.head_ptr].valid = -1; //probably wrong or not needed
   Inst_Info inst = t->ROB_Entries[t->head_ptr].inst;
+  t->ROB_Entries[t->head_ptr].valid = false;
   t->head_ptr++;
   if(t->head_ptr >= MAX_ROB_ENTRIES)//makes the rob circular
     t->head_ptr = 0;
-
   return inst;
 }
 
