@@ -29,11 +29,11 @@ void ROB_print_state(ROB *t){
  int ii = 0;
   printf("Printing ROB \n");
   printf("Entry  Inst   Valid   ready src1t   src2t\n");
-  for(ii = 0; ii < 10; ii++) {
+  for(ii = 130; ii < 150; ii++) {
     printf("%5d ::  %d\t", ii, (int)t->ROB_Entries[ii].inst.inst_num);
     printf(" %5d\t", t->ROB_Entries[ii].valid);
     printf(" %5d\n", t->ROB_Entries[ii].ready);
-    printf(" %5d\n", t->ROB_Entries[ii].exec);
+    printf("ex %5d\n", t->ROB_Entries[ii].exec);
     printf(" %5d\n", t->ROB_Entries[ii].inst.src1_tag);
     printf(" %5d\n", t->ROB_Entries[ii].inst.src2_tag);
   }
@@ -167,9 +167,10 @@ int i = t->head_ptr;
 /////////////////////////////////////////////////////////////
 
 Inst_Info ROB_remove_head(ROB *t){
-  //t->ROB_Entries[t->ROB_Entries.head_ptr].valid = -1; //probably wrong or not needed
   Inst_Info inst = t->ROB_Entries[t->head_ptr].inst;
   t->ROB_Entries[t->head_ptr].valid = false;
+  t->ROB_Entries[t->head_ptr].ready= false;
+  t->ROB_Entries[t->head_ptr].exec = false;
   t->head_ptr++;
   if(t->head_ptr >= MAX_ROB_ENTRIES)//makes the rob circular
     t->head_ptr = 0;

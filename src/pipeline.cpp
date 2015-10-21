@@ -161,7 +161,9 @@ void pipe_print_state(Pipeline *p){
 void pipe_cycle(Pipeline *p)
 {
     p->stat_num_cycle++;
-    //printf("cycles %d\n", (int)p->stat_num_cycle);
+//    printf("cycles %d commited %d\n", (int)p->stat_num_cycle, (int)p->stat_retired_inst);
+//    printf("head %d tail %d", p->pipe_ROB->head_ptr, p->pipe_ROB->tail_ptr);
+
     pipe_cycle_commit(p);
   //  printf("commit ");
     pipe_cycle_writeback(p);
@@ -176,12 +178,13 @@ void pipe_cycle(Pipeline *p)
 //printf("dec ");
     pipe_cycle_fetch(p);
 //printf("fet ");
-   // ROB_print_state(p->pipe_ROB);
-    //pipe_print_state(p);
+//    ROB_print_state(p->pipe_ROB);
+//    EXEQ_print_state(p->pipe_EXEQ);
+    //RAT_print_state(p->pipe_RAT);
+//    pipe_print_state(p);
     //printf("space %d",ROB_check_space(p->pipe_ROB));
     //printf("head src1 %d src2 %d r1 %d r2 %d ynotready %d", p->pipe_ROB->ROB_Entries[p->pipe_ROB->head_ptr].inst.src1_tag, p->pipe_ROB->ROB_Entries[p->pipe_ROB->head_ptr].inst.src2_tag, p->pipe_ROB->ROB_Entries[p->pipe_ROB->head_ptr].inst.src1_ready, p->pipe_ROB->ROB_Entries[p->pipe_ROB->head_ptr].inst.src2_ready, p->pipe_ROB->ROB_Entries[p->pipe_ROB->ROB_Entries[p->pipe_ROB->head_ptr].inst.src1_tag].ready);
-    //printf("head %d tail %d", p->pipe_ROB->head_ptr, p->pipe_ROB->tail_ptr);
-}
+   }
 
 //--------------------------------------------------------------------//
 
@@ -353,6 +356,7 @@ void pipe_cycle_schedule(Pipeline *p) {
     // Find all valid entries, if oldest is stalled then stop
     // Else mark it as ready to execute and send to SC_latch
       // if both sources are ready and valid then it becomes scheduled and exec = 1
+/*
     int idx = p->pipe_ROB->head_ptr;
     if(p->pipe_ROB->head_ptr == p->pipe_ROB->tail_ptr && p->pipe_ROB->ROB_Entries[idx].exec){//if head = tail and head has exe'd then move to next value
       idx++;
@@ -361,7 +365,6 @@ void pipe_cycle_schedule(Pipeline *p) {
       }
     }
     for(;idx != p->pipe_ROB->tail_ptr; idx++){
-//      printf("sched %d", idx);
       if(!p->pipe_ROB->ROB_Entries[idx].exec) //this should stop at the first inst that has not been sent to exe
         break;
       //make idx circular
@@ -380,7 +383,24 @@ void pipe_cycle_schedule(Pipeline *p) {
  	  return; //n = 1 only   
       }
     }
+*/
+  int idx = p->pipe_ROB->head_ptr;
 
+   for(int i = 0; i<MAX_ROB_ENTRIES; i++){ 
+    if(p->pipe_ROB->ROB_Entries[idx].valid && p->pipe_ROB->ROB_Entries[idx].inst.src1_ready && p->pipe_ROB->ROB_Entries[idx].inst.src2_ready && !p->pipe_ROB->ROB_Entries[idx].exec && !p->pipe_ROB->ROB_Entries[idx].ready){
+      ROB_mark_exec(p->pipe_ROB, p->pipe_ROB->ROB_Entries[idx].inst); // this second param is really convoluted and I think unneeded
+      p->SC_latch[ii].inst = p->pipe_ROB->ROB_Entries[idx].inst;
+      p->SC_latch[ii].valid = true;
+      p->SC_latch[ii].stall = false;
+      return; //for n= 1
+    }
+    if(!p->pipe_ROB->ROB_Entries[idx].exec){//hasn't executed and sources must not be ready so stop looking this is oldest and isn't ready
+      return;
+    }
+    if(idx >= MAX_ROB_ENTRIES-1)
+      idx = -1;
+    idx++;
+   }
   }
 
   if(SCHED_POLICY==1){
@@ -416,14 +436,12 @@ void pipe_cycle_writeback(Pipeline *p){
   // TODO: Writeback to ROB (using wakeup function)
   // TODO: Update the ROB, mark ready, and update Inst Info in ROB
   //printf("ex latch valid %d\n", p->EX_latch[ii].valid);
-  //printf("head %d", p->pipe_ROB->head_ptr);
   for(ii = 0; ii < MAX_WRITEBACKS; ii++){ //loop over all of the entries in the exe latch
     if(p->EX_latch[ii].valid == true){ // needed for the latency thing
-      //printf("wb");
       ROB_wakeup(p->pipe_ROB, p->EX_latch[ii].inst.dr_tag);
       ROB_mark_ready(p->pipe_ROB, p->EX_latch[ii].inst);
-      //printf("markready %d", p->pipe_ROB->head_ptr);
-
+ //     printf("markready %d", (int)p->EX_latch[ii].inst.inst_num);
+      p->EX_latch[ii].valid = false;
     }
   }
 }
@@ -434,7 +452,6 @@ void pipe_cycle_writeback(Pipeline *p){
 
 void pipe_cycle_commit(Pipeline *p) {
   int ii = 0;
-//  printf("get back");
   // TODO: check the head of the ROB. If ready commit (update stats)
   // TODO: Deallocate entry from ROB
   // TODO: Update RAT after checking if the mapping is still relevant
@@ -452,22 +469,9 @@ void pipe_cycle_commit(Pipeline *p) {
   }
   if(p->FE_latch[ii].inst.inst_num >= p->halt_inst_num)//stop fetching when done
     p->FE_latch[ii].valid=false;
-//  if(p->stat_num_cycle == 28) 
+//  if(p->stat_num_cycle == 100000) 
   //  p->halt=true;
 
-
-/*
-  // DUMMY CODE (for compiling, and ensuring simulation terminates!)
-  for(ii=0; ii<PIPE_WIDTH; ii++){
-    if(p->FE_latch[ii].valid){
-      if(p->FE_latch[ii].inst.inst_num >= p->halt_inst_num){
-        p->halt=true;
-      }else{
-        p->stat_retired_inst++;
-      }
-    }
-  }
-*/
 }
 
 //--------------------------------------------------------------------//
