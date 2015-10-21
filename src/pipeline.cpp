@@ -31,7 +31,6 @@ void pipe_fetch_inst(Pipeline *p, Pipe_Latch* fe_latch){
     // Send out a dummy terminate op
       if( bytes_read < sizeof(Trace_Rec)) {
         p->halt_inst_num=p->inst_num_tracker;
-        //printf("halt num %d", (int)p->halt_inst_num);
         halt_fetch = 1;
         fe_latch->valid=true;
         fe_latch->inst.dest_reg = -1;
@@ -161,29 +160,18 @@ void pipe_print_state(Pipeline *p){
 void pipe_cycle(Pipeline *p)
 {
     p->stat_num_cycle++;
-//    printf("cycles %d commited %d\n", (int)p->stat_num_cycle, (int)p->stat_retired_inst);
-//    printf("head %d tail %d", p->pipe_ROB->head_ptr, p->pipe_ROB->tail_ptr);
 
     pipe_cycle_commit(p);
-  //  printf("commit ");
     pipe_cycle_writeback(p);
-   // printf("wb ");
     pipe_cycle_exe(p);
-//printf("exe ");
     pipe_cycle_schedule(p);
-//printf("sch ");
     pipe_cycle_issue(p);
-//printf("issue ");
     pipe_cycle_decode(p);
-//printf("dec ");
     pipe_cycle_fetch(p);
-//printf("fet ");
 //    ROB_print_state(p->pipe_ROB);
 //    EXEQ_print_state(p->pipe_EXEQ);
     //RAT_print_state(p->pipe_RAT);
 //    pipe_print_state(p);
-    //printf("space %d",ROB_check_space(p->pipe_ROB));
-    //printf("head src1 %d src2 %d r1 %d r2 %d ynotready %d", p->pipe_ROB->ROB_Entries[p->pipe_ROB->head_ptr].inst.src1_tag, p->pipe_ROB->ROB_Entries[p->pipe_ROB->head_ptr].inst.src2_tag, p->pipe_ROB->ROB_Entries[p->pipe_ROB->head_ptr].inst.src1_ready, p->pipe_ROB->ROB_Entries[p->pipe_ROB->head_ptr].inst.src2_ready, p->pipe_ROB->ROB_Entries[p->pipe_ROB->ROB_Entries[p->pipe_ROB->head_ptr].inst.src1_tag].ready);
    }
 
 //--------------------------------------------------------------------//
@@ -219,7 +207,6 @@ void pipe_cycle_decode(Pipeline *p){
        continue;
      } else {  // No Stall & there is Space in Latch
        for(jj = 0; jj < PIPE_WIDTH; jj++) { // Loop Over FE Latch
-         //printf("fe latch %d\n", p->FE_latch[jj].valid);
          if(p->FE_latch[jj].valid) {
            if(p->FE_latch[jj].inst.inst_num == start_inst_id) { // In Order Inst Found
              p->ID_latch[ii]        = p->FE_latch[jj];
@@ -295,8 +282,6 @@ void pipe_cycle_issue(Pipeline *p) {
   // If src1/src2 is not remapped, set src1ready/src2ready
   // If src1/src is remapped, set src1tag/src2tag from RAT. Set src1ready/src2ready based on ready bit from ROB entries.
   // Set dr_tag
-  //printf("id_inst_num %d\n", (int)p->ID_latch[ii].inst.inst_num);
-  //printf("id valid %d\n",p->ID_latch[ii].valid);
   p->ID_latch[ii].stall = false;
   p->FE_latch[ii].stall = false;
   for(ii = 0; ii < PIPE_WIDTH; ii++){
@@ -307,36 +292,29 @@ void pipe_cycle_issue(Pipeline *p) {
       //get and insert src1/src2 remapping and set the ready bit
       if(p->ID_latch[ii].inst.src1_reg == -1 || RAT_get_remap(p->pipe_RAT, p->ID_latch[ii].inst.src1_reg) == -1){
         p->ID_latch[ii].inst.src1_ready = true;    //not in rat use arf
-        //p->ID_latch[ii].inst.src1_tag = -1;
       }else{
         p->ID_latch[ii].inst.src1_tag = RAT_get_remap(p->pipe_RAT, p->ID_latch[ii].inst.src1_reg);
         p->ID_latch[ii].inst.src1_ready = ROB_check_ready(p->pipe_ROB, p->ID_latch[ii].inst.src1_tag);//using prf_id(tag) as an index check the rob to see if it's ready
       }
       if(p->ID_latch[ii].inst.src2_reg == -1 || RAT_get_remap(p->pipe_RAT, p->ID_latch[ii].inst.src2_reg) == -1){
         p->ID_latch[ii].inst.src2_ready = true;   //not in rat use arf
-        //p->ID_latch[ii].inst.src2_tag = -1;
       }else{
         p->ID_latch[ii].inst.src2_tag = RAT_get_remap(p->pipe_RAT, p->ID_latch[ii].inst.src2_reg);
         p->ID_latch[ii].inst.src2_ready = ROB_check_ready(p->pipe_ROB, p->ID_latch[ii].inst.src2_tag); //using prf_id(tag) as an index check the rob to see if it's ready     
       }
       //set dr_tag
         //for setting dr_tag one possibility is check for space then set dr tag equal to tail_ptr
-        //but maybe we should check for space up top
       p->ID_latch[ii].inst.dr_tag = p->pipe_ROB->tail_ptr;
       //insert into rob
       int prd_idx = ROB_insert(p->pipe_ROB, p->ID_latch[ii].inst); //the return value for this is a param for set_remap in RAT
-      //printf("dest %d\n", p->ID_latch[ii].inst.dest_reg);
       //make sure that dest reg is needed (-1 if not needed)
       if(p->ID_latch[ii].inst.dest_reg != -1)
         RAT_set_remap(p->pipe_RAT, p->ID_latch[ii].inst.dest_reg, prd_idx);
       p->ID_latch[ii].valid = false;
-//      p->FE_latch[ii].valid = true;
-      //printf("id state %d\n", p->ID_latch[ii].stall);
     }else{
       //if rob is full stall...............
       p->ID_latch[ii].stall = true;
       p->FE_latch[ii].stall = true;
-      //printf("issue stall\n");
       return;
     }
   }
@@ -356,36 +334,7 @@ void pipe_cycle_schedule(Pipeline *p) {
     // Find all valid entries, if oldest is stalled then stop
     // Else mark it as ready to execute and send to SC_latch
       // if both sources are ready and valid then it becomes scheduled and exec = 1
-/*
-    int idx = p->pipe_ROB->head_ptr;
-    if(p->pipe_ROB->head_ptr == p->pipe_ROB->tail_ptr && p->pipe_ROB->ROB_Entries[idx].exec){//if head = tail and head has exe'd then move to next value
-      idx++;
-      if(idx == MAX_ROB_ENTRIES){
-        idx=0;
-      }
-    }
-    for(;idx != p->pipe_ROB->tail_ptr; idx++){
-      if(!p->pipe_ROB->ROB_Entries[idx].exec) //this should stop at the first inst that has not been sent to exe
-        break;
-      //make idx circular
-      if(idx >= MAX_ROB_ENTRIES-1)
-        idx = -1;
-      }
- //     printf("schidx %d\n",idx);
-      if(p->pipe_ROB->ROB_Entries[idx].valid && !p->pipe_ROB->ROB_Entries[idx].exec && !p->pipe_ROB->ROB_Entries[idx].ready){
-        //printf("\nidx sch %d ready1 %d src1t %d src1 %d\n", idx, p->pipe_ROB->ROB_Entries[idx].inst.src1_ready, p->pipe_ROB->ROB_Entries[idx].inst.src1_tag, p->pipe_ROB->ROB_Entries[idx].inst.src1_reg);
-        if( p->pipe_ROB->ROB_Entries[idx].inst.src1_ready && p->pipe_ROB->ROB_Entries[idx].inst.src2_ready){//check to see if EX is ready
-//printf("if two");
-          ROB_mark_exec(p->pipe_ROB, p->pipe_ROB->ROB_Entries[idx].inst); // this second param is really convoluted and I think unneeded
-          p->SC_latch[ii].inst = p->pipe_ROB->ROB_Entries[idx].inst;
-          p->SC_latch[ii].valid = true;
-          p->SC_latch[ii].stall = false;
- 	  return; //n = 1 only   
-      }
-    }
-*/
   int idx = p->pipe_ROB->head_ptr;
-
    for(int i = 0; i<MAX_ROB_ENTRIES; i++){ 
     if(p->pipe_ROB->ROB_Entries[idx].valid && p->pipe_ROB->ROB_Entries[idx].inst.src1_ready && p->pipe_ROB->ROB_Entries[idx].inst.src2_ready && !p->pipe_ROB->ROB_Entries[idx].exec && !p->pipe_ROB->ROB_Entries[idx].ready){
       ROB_mark_exec(p->pipe_ROB, p->pipe_ROB->ROB_Entries[idx].inst); // this second param is really convoluted and I think unneeded
@@ -409,8 +358,6 @@ void pipe_cycle_schedule(Pipeline *p) {
     // Mark ROB entry as ready to execute  and transfer instruction to SC_latch
       //loop from head to tail checking bits
    for(int idx = p->pipe_ROB->head_ptr; idx != p->pipe_ROB->tail_ptr; idx++){
-
-    
     if(p->pipe_ROB->ROB_Entries[idx].valid && p->pipe_ROB->ROB_Entries[idx].inst.src1_ready && p->pipe_ROB->ROB_Entries[idx].inst.src2_ready && !p->pipe_ROB->ROB_Entries[idx].exec && !p->pipe_ROB->ROB_Entries[idx].ready){
       ROB_mark_exec(p->pipe_ROB, p->pipe_ROB->ROB_Entries[idx].inst); // this second param is really convoluted and I think unneeded
       p->SC_latch[ii].inst = p->pipe_ROB->ROB_Entries[idx].inst;
@@ -422,9 +369,7 @@ void pipe_cycle_schedule(Pipeline *p) {
     if(idx >= MAX_ROB_ENTRIES-1)
       idx = -1;
     } 
-
   }
-
 }
 
 
@@ -432,16 +377,14 @@ void pipe_cycle_schedule(Pipeline *p) {
 
 void pipe_cycle_writeback(Pipeline *p){
   int ii = 0;
-  // TODO: Go through all instructions out of EXE latch
-  // TODO: Writeback to ROB (using wakeup function)
-  // TODO: Update the ROB, mark ready, and update Inst Info in ROB
-  //printf("ex latch valid %d\n", p->EX_latch[ii].valid);
+  //  Go through all instructions out of EXE latch
+  //  Writeback to ROB (using wakeup function)
+  //  Update the ROB, mark ready, and update Inst Info in ROB
   for(ii = 0; ii < MAX_WRITEBACKS; ii++){ //loop over all of the entries in the exe latch
     if(p->EX_latch[ii].valid == true){ // needed for the latency thing
       ROB_wakeup(p->pipe_ROB, p->EX_latch[ii].inst.dr_tag);
       ROB_mark_ready(p->pipe_ROB, p->EX_latch[ii].inst);
- //     printf("markready %d", (int)p->EX_latch[ii].inst.inst_num);
-      p->EX_latch[ii].valid = false;
+      p->EX_latch[ii].valid = false; //mark invalid to ensure that latch is only read once
     }
   }
 }
@@ -452,26 +395,20 @@ void pipe_cycle_writeback(Pipeline *p){
 
 void pipe_cycle_commit(Pipeline *p) {
   int ii = 0;
-  // TODO: check the head of the ROB. If ready commit (update stats)
-  // TODO: Deallocate entry from ROB
-  // TODO: Update RAT after checking if the mapping is still relevant
-  //printf("commithead %d", p->pipe_ROB->head_ptr);
+  //  check the head of the ROB. If ready commit (update stats)
+  //  Deallocate entry from ROB
+  //  Update RAT after checking if the mapping is still relevant
   if(ROB_check_head(p->pipe_ROB)){
     Inst_Info inst = ROB_remove_head(p->pipe_ROB);
-//printf("removehead %d", p->pipe_ROB->head_ptr);
     //update rat with the info in inst
     if(inst.dest_reg != -1 && inst.dr_tag == (int)p->pipe_RAT->RAT_Entries[inst.dest_reg].prf_id) //if dest wasn't used then don't mess with rat and if rat has since been changed dont invalidate
       RAT_reset_entry(p->pipe_RAT, inst.dest_reg);
- 
     p->stat_retired_inst++;
     if(p->pipe_ROB->head_ptr == p->pipe_ROB->tail_ptr )
       p->halt=true;   
   }
   if(p->FE_latch[ii].inst.inst_num >= p->halt_inst_num)//stop fetching when done
     p->FE_latch[ii].valid=false;
-//  if(p->stat_num_cycle == 100000) 
-  //  p->halt=true;
-
 }
 
 //--------------------------------------------------------------------//

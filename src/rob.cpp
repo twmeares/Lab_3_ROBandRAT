@@ -54,7 +54,6 @@ bool ROB_check_space(ROB *t){
 /////////////////////////////////////////////////////////////
 
 int ROB_insert(ROB *t, Inst_Info inst){
-//from the handout
   //insert the instr, get remapped sources using rat, if rat is invalid mark the source as ready and if the rat is valid get the source ready bits from the rob
   //get the index(prf_id) of the rob entry/this is the new map for the dest reg
   //update the rat with the destination register map
@@ -68,9 +67,6 @@ int ROB_insert(ROB *t, Inst_Info inst){
     t->ROB_Entries[t->tail_ptr].exec = false;
     t->ROB_Entries[t->tail_ptr].ready = false;
     int index = t->tail_ptr;
-
- 
-//add more things like wtf is dr_tag i think it is the index of the rob? kana~
     //update the tail pointer
     t->tail_ptr++;
     if(t->tail_ptr >= MAX_ROB_ENTRIES)//makes the rob circular
@@ -88,8 +84,7 @@ int ROB_insert(ROB *t, Inst_Info inst){
 /////////////////////////////////////////////////////////////
 
 void ROB_mark_exec(ROB *t, Inst_Info inst){
-//look at the inst and mark the correct rob spot?
-  //look at the dr_tag and mark that inst as exec
+  //look at the index of dr_tag and mark that inst as exec
   t->ROB_Entries[inst.dr_tag].exec = true;
 }
 
@@ -129,8 +124,7 @@ bool ROB_check_head(ROB *t){
 /////////////////////////////////////////////////////////////
 
 void  ROB_wakeup(ROB *t, int tag){
-//i think in this stage we should tell any waiting inst that sources are ready
-  //using src1_tag as the index for the rob update the ready(presence) bit of the specific entry
+//in this stage we should tell any waiting inst that sources are ready
 //loop from tag to tail and check each source against tag dest
 int i = t->head_ptr;
   if(t->head_ptr == t->tail_ptr){
@@ -140,8 +134,6 @@ int i = t->head_ptr;
     }
   }
   for(; i!= t->tail_ptr; i++){
-    //printf("wakeup loop tail %d idx %d\n",t->tail_ptr, i);
-    //printf("src1 %d param %d idx %d",t->ROB_Entries[i].inst.src1_tag, tag, i);
     if(t->ROB_Entries[i].inst.src1_tag == tag)
       t->ROB_Entries[i].inst.src1_ready = true;
     if(t->ROB_Entries[i].inst.src2_tag == tag)
